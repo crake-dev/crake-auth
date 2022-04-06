@@ -1,18 +1,49 @@
 version: 0.2
+
+env:
+  variables:
+    SPRING_PROFILE: "dev"
+
 phases:
+  pre_build:
+    commands:
+      - REGION=ap-northeast-2
+      - REPOSITORY_URI=281816411259.dkr.ecr.ap-northeast-2.amazonaws.com/crake-dev
+      - IMAGE_NAME=crake-dev
+      - IMAGE_TAG=latest
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - BUILD_TAG=${COMMIT_HASH:=latest}
+      - CONTAINER_NAME=crake-dev
+      - echo Logging in to Amazon ECR...
+      - aws --version
+      - aws ecr get-login-password --region $REGION | docker login -u AWS --password-stdin $REPOSITORY_URI
   build:
     commands:
-      - echo Build Starting on `date`
       - chmod +x ./gradlew
-      - ./gradlew build
+      - echo unit testing ...
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILE} ./gradlew test
+      - echo make jar ...
+      - ./gradlew assemble
+      - echo Build started on `date`
+      - echo Building the Docker image...
+      - chmod +x gradlew
+      - docker build -f Dockerfile -t $REPOSITORY_URI:latest --build-arg JAR_FILE=build/libs/app.jar .
+      - docker tag $REPOSITORY_URI/$IMAGE_NAME:$IMAGE_TAG $REPOSITORY_URI/$IMAGE_NAME:$BUILD_TAG
   post_build:
     commands:
-      - echo $(basename ./build/libs/*.jar)
-      - pwd
-artifacts:
-  files:
-    - build/libs/*.jar
-  discard-paths: yes
+      - echo Pushing the Docker images...
+      - docker push $REPOSITORY_URI/$IMAGE_NAME:$IMAGE_TAG
+      - docker push $REPOSITORY_URI/$IMAGE_NAME:$BUILD_TAG
+      - printf '[{"name":"%s","imageUri":"%s"}]' $CONTAINER_NAME $REPOSITORY_URI/$IMAGE_NAME:$BUILD_TAG > imagedefinitions.json
+      - cat imagedefinitions.json
+
 cache:
   paths:
-    - '/root/.gradle/caches/**/*'
+    - '/root/.gradle/**/*'
+    - '/root/.m2/**/*'
+    - '/root/.cache/pip/**/*'
+    - '/root/.npm/**/*'
+
+artifacts:
+  files:
+    - imagedefinitions.json
