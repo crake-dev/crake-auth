@@ -9,7 +9,6 @@ phases:
     commands:
       - REGION=ap-northeast-2
       - REPOSITORY_URI=281816411259.dkr.ecr.ap-northeast-2.amazonaws.com/crake-dev
-      - IMAGE_NAME=crake-dev
       - IMAGE_TAG=latest
       - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
       - BUILD_TAG=${COMMIT_HASH:=latest}
@@ -26,13 +25,13 @@ phases:
       - echo Build started on `date`
       - echo Building the Docker image...
       - chmod +x gradlew
-      - docker build -t $REPOSITORY_URI/$IMAGE_NAME:$IMAGE_TAG .
-      - docker tag $REPOSITORY_URI/$IMAGE_NAME:$IMAGE_TAG $REPOSITORY_URI/$IMAGE_NAME:$BUILD_TAG
+      - docker build -t $REPOSITORY_URI:$IMAGE_TAG .
+      - docker tag $REPOSITORY_URI:$IMAGE_TAG $REPOSITORY_URI:$BUILD_TAG
   post_build:
     commands:
       - echo Pushing the Docker images...
-      - docker push $REPOSITORY_URI
-      - printf '[{"name":"%s","imageUri":"%s"}]' $CONTAINER_NAME $REPOSITORY_URI/$IMAGE_NAME:$BUILD_TAG > imagedefinitions.json
+      - docker push $REPOSITORY_URI:$BUILD_TAG
+      - printf '[{"name":"%s","imageUri":"%s"}]' $CONTAINER_NAME $REPOSITORY_URI:$BUILD_TAG > imagedefinitions.json
       - cat imagedefinitions.json
 
 cache:
