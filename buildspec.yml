@@ -31,8 +31,8 @@ phases:
   post_build:
     commands:
       - echo Pushing the Docker images...
-      - docker push $REPOSITORY_URI:$IMAGE_TAG
-      - docker push $REPOSITORY_URI:$BUILD_TAG
+      - docker push $REPOSITORY_URI/$IMAGE_NAME:$IMAGE_TAG
+      - docker push $REPOSITORY_URI/$IMAGE_NAME:$BUILD_TAG
       - printf '[{"name":"%s","imageUri":"%s"}]' $CONTAINER_NAME $REPOSITORY_URI/$IMAGE_NAME:$BUILD_TAG > imagedefinitions.json
       - cat imagedefinitions.json
 
